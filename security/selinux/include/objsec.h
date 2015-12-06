@@ -24,7 +24,7 @@
 #include <linux/binfmts.h>
 #include <linux/in.h>
 #include <linux/spinlock.h>
-#include "flask.h"
+//#include "flask.h"
 #include "avc.h"
 
 struct task_security_struct {
