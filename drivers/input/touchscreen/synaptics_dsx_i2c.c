@@ -3856,10 +3856,9 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 	set_bit(KEY_MENU, rmi4_data->input_dev->keybit);
 	set_bit(KEY_HOMEPAGE, rmi4_data->input_dev->keybit);
 	set_bit(KEY_F3, rmi4_data->input_dev->keybit);
-	set_bit(KEY_DOUBLE_TAP, rmi4_data->input_dev->keybit);
+	//set_bit(KEY_DOUBLE_TAP, rmi4_data->input_dev->keybit);
 	set_bit(EV_MSC, rmi4_data->input_dev->evbit);
-	rmi4_data->input_dev->mscbit[0] = BIT_MASK(MSC_GESTURE);
-        // disabled in onyx kernel as well.
+	set_bit(MSC_GESTURE, rmi4_data->input_dev->mscbit);
 	//set_bit(KEY_GESTURE_CIRCLE, rmi4_data->input_dev->keybit);
 	//set_bit(KEY_GESTURE_SWIPE_DOWN, rmi4_data->input_dev->keybit);
 	//set_bit(KEY_GESTURE_V, rmi4_data->input_dev->keybit);
