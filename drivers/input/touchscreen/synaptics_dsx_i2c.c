@@ -2402,6 +2402,9 @@ static unsigned char synaptics_rmi4_update_gesture2(unsigned char *gesture,
 			switch (gesture[2]) {
 				case 0x01:  //UP
 					gesturemode = DownVee;
+                                        // do not know which category fits best
+					if (atomic_read(&syna_rmi4_data->flashlight_enable))
+						keyvalue = KEY_GESTURE_DOWN_V;
 					break;
 				case 0x02:  //DOWN
 					gesturemode = UpVee;
@@ -2440,6 +2443,15 @@ static unsigned char synaptics_rmi4_update_gesture2(unsigned char *gesture,
 
 	return keyvalue;
 }
+
+// mce gestures
+#define MSC_GESTURE_DOUBLE_TAP  4
+#define MSC_GESTURE_V           5
+#define MSC_GESTURE_CIRCLE      6
+#define MSC_GESTURE_DOWN_V      7
+#define MSC_GESTURE_TWO_SWIPE   8
+#define MSC_GESTURE_RIGHT_V     9
+#define MSC_GESTURE_LEFT_V      10
 
 /**
  * synaptics_rmi4_f12_abs_report()
@@ -2493,12 +2505,48 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 				gestureext,
 				sizeof(gestureext));
 		if (gesture[0]) {
+                        unsigned char mce;
+
 			keyvalue = synaptics_rmi4_update_gesture2(gesture,gestureext);
 			if (keyvalue && keyvalue != KEY_F9) {
-				input_report_key(rmi4_data->input_dev, keyvalue, 1);
-				input_sync(rmi4_data->input_dev);
-				input_report_key(rmi4_data->input_dev, keyvalue, 0);
-				input_sync(rmi4_data->input_dev);
+                                // here gestures are reported as keys.
+                                // translate some into mce gestures
+                                mce = 1;
+                                switch(keyvalue) {
+					case KEY_DOUBLE_TAP:
+						keyvalue = MSC_GESTURE_DOUBLE_TAP;
+						break;
+					case KEY_GESTURE_CIRCLE:
+						keyvalue = MSC_GESTURE_CIRCLE;
+						break;
+					case KEY_GESTURE_SWIPE_DOWN:
+						keyvalue = MSC_GESTURE_TWO_SWIPE;
+						break;
+					case KEY_GESTURE_V:
+						keyvalue = MSC_GESTURE_V;
+						break;
+					case KEY_GESTURE_DOWN_V:
+						keyvalue = MSC_GESTURE_DOWN_V;
+						break;
+					case KEY_GESTURE_LTR:
+						keyvalue = MSC_GESTURE_LEFT_V;
+						break;
+					case KEY_GESTURE_GTR:
+						keyvalue = MSC_GESTURE_RIGHT_V;
+						break;
+					default:
+						mce = 0;
+						break;
+                                }
+                                if (mce) {
+					input_event(rmi4_data->input_dev, EV_MSC, MSC_GESTURE, keyvalue);
+					input_sync(rmi4_data->input_dev);
+				} else {
+					input_report_key(rmi4_data->input_dev, keyvalue, 1);
+					input_sync(rmi4_data->input_dev);
+					input_report_key(rmi4_data->input_dev, keyvalue, 0);
+					input_sync(rmi4_data->input_dev);
+				}
 			}
 			print_ts(TS_ERROR, KERN_ERR "[syna]gesture: %2x %2x %2x %2x %2x\n",gesture[0],gesture[1],gesture[2],gesture[3],gesture[4]);
 			print_ts(TS_DEBUG, KERN_ERR "[syna]gestureext: %2x %2x %2x %2x %2x %2x %2x %2x %2x\n",
@@ -3808,12 +3856,14 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 	set_bit(KEY_MENU, rmi4_data->input_dev->keybit);
 	set_bit(KEY_HOMEPAGE, rmi4_data->input_dev->keybit);
 	set_bit(KEY_F3, rmi4_data->input_dev->keybit);
-	set_bit(KEY_DOUBLE_TAP, rmi4_data->input_dev->keybit);
-	set_bit(KEY_GESTURE_CIRCLE, rmi4_data->input_dev->keybit);
-	set_bit(KEY_GESTURE_SWIPE_DOWN, rmi4_data->input_dev->keybit);
-	set_bit(KEY_GESTURE_V, rmi4_data->input_dev->keybit);
-	set_bit(KEY_GESTURE_LTR, rmi4_data->input_dev->keybit);
-	set_bit(KEY_GESTURE_GTR, rmi4_data->input_dev->keybit);
+	//set_bit(KEY_DOUBLE_TAP, rmi4_data->input_dev->keybit);
+	set_bit(EV_MSC, rmi4_data->input_dev->evbit);
+	set_bit(MSC_GESTURE, rmi4_data->input_dev->mscbit);
+	//set_bit(KEY_GESTURE_CIRCLE, rmi4_data->input_dev->keybit);
+	//set_bit(KEY_GESTURE_SWIPE_DOWN, rmi4_data->input_dev->keybit);
+	//set_bit(KEY_GESTURE_V, rmi4_data->input_dev->keybit);
+	//set_bit(KEY_GESTURE_LTR, rmi4_data->input_dev->keybit);
+	//set_bit(KEY_GESTURE_GTR, rmi4_data->input_dev->keybit);
 	synaptics_ts_init_virtual_key(rmi4_data);
 
 	input_set_abs_params(rmi4_data->input_dev,
